@@ -1,121 +1,104 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
+import { useEffect, useState } from 'react'
+import axios from 'axios'
 import './App.css'
 
+type WeatherMeasurement = {
+  id: number
+  station_name: string
+  timestamp_utc: string
+  temperature_c: number | null
+  pressure_hpa: number | null
+  wind_speed_ms: number | null
+}
+
+const API_URL = 'http://127.0.0.1:8000/api/weather/'
+
+function formatDate(value: string) {
+  return new Date(value).toLocaleString('es-ES', {
+    timeZone: 'Europe/Madrid',
+    hour12: false,
+  })
+}
+
 function App() {
-  const [count, setCount] = useState(0)
+  const [data, setData] = useState<WeatherMeasurement[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const controller = new AbortController()
+
+    async function loadWeather() {
+      try {
+        setIsLoading(true)
+        setError(null)
+
+        const startDate = '2026-05-20T00:00:00'
+        const endDate = '2026-05-30T00:00:00'
+        const stationName = 'Meteo Station Gabriel de Castilla'
+        const timeAggregation = 'Hourly'
+        const url = `${API_URL}antartida/datos/fechaini/${encodeURIComponent(
+          startDate,
+        )}/fechafin/${encodeURIComponent(endDate)}/estacion/${encodeURIComponent(
+          stationName,
+        )}?time_aggregation=${encodeURIComponent(timeAggregation)}`
+
+        const response = await axios.get<WeatherMeasurement[]>(url, {
+          signal: controller.signal,
+        })
+
+        setData(response.data)
+      } catch (err) {
+        if (axios.isCancel(err)) {
+          return
+        }
+        setError('No se pudo cargar la informacion meteorologica.')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadWeather()
+
+    return () => controller.abort()
+  }, [])
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <main className="app">
+      <header className="app__header">
+        <h1>GS Inima Weather</h1>
+        <p>Observaciones recientes en la Antartida (CET/CEST).</p>
+      </header>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+      {isLoading ? (
+        <p className="app__status">Loading...</p>
+      ) : error ? (
+        <p className="app__status app__status--error">{error}</p>
+      ) : (
+        <section className="app__list">
+          {data.map((item) => (
+            <article key={`${item.station_name}-${item.id}-${item.timestamp_utc}`} className="app__card">
+              <h2>{item.station_name}</h2>
+              <p>Fecha: {formatDate(item.timestamp_utc)}</p>
+              <dl>
+                <div>
+                  <dt>Temperatura</dt>
+                  <dd>{item.temperature_c ?? 'N/A'} °C</dd>
+                </div>
+                <div>
+                  <dt>Presion</dt>
+                  <dd>{item.pressure_hpa ?? 'N/A'} hPa</dd>
+                </div>
+                <div>
+                  <dt>Viento</dt>
+                  <dd>{item.wind_speed_ms ?? 'N/A'} m/s</dd>
+                </div>
+              </dl>
+            </article>
+          ))}
+        </section>
+      )}
+    </main>
   )
 }
 

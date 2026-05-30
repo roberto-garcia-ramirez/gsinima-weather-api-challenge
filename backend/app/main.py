@@ -22,9 +22,13 @@ settings = get_settings()
 
 app = FastAPI(title="GS Inima Weather API", lifespan=lifespan)
 
+# Configuración estricta pero directa de CORS para habilitar la comunicación con React/Vite
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=[
+        "http://localhost:5173", 
+        "http://127.0.0.1:5173"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
