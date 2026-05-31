@@ -31,7 +31,7 @@ settings = get_settings()
 
 app = FastAPI(title="GS Inima Weather API", lifespan=lifespan)
 
-# Configuración estricta pero directa de CORS para habilitar la comunicación con React/Vite
+# Strict but direct CORS configuration to enable React/Vite communication
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -43,7 +43,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Interceptor global para forzar la captura en consola de excepciones ocultas
+# Global interceptor to force console capture of hidden exceptions
 @app.middleware("http")
 async def super_logger(request: Request, call_next):
     print(f"\n[INTERCEPTOR] Petición entrando a: {request.url}")

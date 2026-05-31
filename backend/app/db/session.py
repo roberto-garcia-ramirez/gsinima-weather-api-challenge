@@ -7,10 +7,10 @@ from app.core.config import get_settings
 
 settings = get_settings()
 
-# Aseguramos que la URL de base de datos sea absoluta si es SQLite
+# Ensure the database URL is absolute when using SQLite
 db_url = settings.DATABASE_URL
 if db_url.startswith("sqlite") and not db_url.startswith("sqlite:////"):
-    # Si es sqlite:///./weather.db, lo convertimos a una ruta absoluta en la raíz de backend
+    # If it is sqlite:///./weather.db, convert it to an absolute path at the backend root
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     db_path = os.path.join(base_dir, "weather.db")
     db_url = f"sqlite+aiosqlite:///{db_path}"
