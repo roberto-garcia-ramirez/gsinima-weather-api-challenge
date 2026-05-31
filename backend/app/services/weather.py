@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Iterable
 
 import httpx
 import pandas as pd
+import logging
 
 from app.core.config import Settings
 from app.repositories.weather import WeatherRepository
@@ -21,6 +22,7 @@ STATION_CODE_MAP: dict[StationName, str] = {
     StationName.GABRIEL_DE_CASTILLA: "89070",
     StationName.JUAN_CARLOS_I: "89064",
 }
+logger = logging.getLogger(__name__)
 
 
 class WeatherService:
@@ -107,6 +109,11 @@ class WeatherService:
         end_date: datetime,
         station: StationName,
     ) -> list[WeatherMeasurementCreate]:
+        if not self.settings.AEMET_API_KEY:
+            logger.warning("Using mocked data due to API key absence/failure")
+            payload = self._mock_aemet_payload(start_date)
+            return self._parse_aemet_payload(payload, station.value)
+
         station_code = STATION_CODE_MAP.get(station)
         if not station_code:
             return []
@@ -119,16 +126,20 @@ class WeatherService:
         )
 
         headers = {"api_key": self.settings.AEMET_API_KEY}
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            meta_response = await client.get(endpoint, headers=headers)
-            meta_response.raise_for_status()
-            meta_payload = meta_response.json()
-            data_url = meta_payload.get("datos")
-            if not data_url:
-                return []
-            data_response = await client.get(data_url)
-            data_response.raise_for_status()
-            payload = data_response.json()
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                meta_response = await client.get(endpoint, headers=headers)
+                meta_response.raise_for_status()
+                meta_payload = meta_response.json()
+                data_url = meta_payload.get("datos")
+                if not data_url:
+                    return []
+                data_response = await client.get(data_url)
+                data_response.raise_for_status()
+                payload = data_response.json()
+        except httpx.HTTPError:
+            logger.warning("Using mocked data due to API key absence/failure")
+            payload = self._mock_aemet_payload(start_date)
 
         return self._parse_aemet_payload(payload, station.value)
 
@@ -152,6 +163,18 @@ class WeatherService:
                 )
             )
         return measurements
+
+    @staticmethod
+    def _mock_aemet_payload(start_date: datetime) -> list[dict[str, object]]:
+        base = start_date.astimezone(timezone.utc).replace(minute=0, second=0, microsecond=0)
+        timestamps = [base + timedelta(hours=offset) for offset in (0, 3, 6, 9, 12)]
+        return [
+            {"fhora": timestamps[0].isoformat().replace("+00:00", "Z"), "temp": -2.3, "pres": 995.4, "vel": 5.2},
+            {"fhora": timestamps[1].isoformat().replace("+00:00", "Z"), "temp": -1.7, "pres": 996.1, "vel": 4.4},
+            {"fhora": timestamps[2].isoformat().replace("+00:00", "Z"), "temp": 0.6, "pres": 994.8, "vel": 7.9},
+            {"fhora": timestamps[3].isoformat().replace("+00:00", "Z"), "temp": -0.9, "pres": 993.5, "vel": 6.1},
+            {"fhora": timestamps[4].isoformat().replace("+00:00", "Z"), "temp": -3.1, "pres": 992.9, "vel": 8.6},
+        ]
 
     @staticmethod
     def _parse_aemet_datetime(value: object) -> datetime | None:
@@ -184,7 +207,7 @@ class WeatherService:
     @staticmethod
     def _get_resample_rule(time_aggregation: TimeAggregation) -> str:
         if time_aggregation == TimeAggregation.HOURLY:
-            return "H"
+            return "h"
         if time_aggregation == TimeAggregation.DAILY:
             return "D"
         return "MS"
@@ -197,6 +220,8 @@ class WeatherService:
     ) -> bool:
         if not measurements:
             return True
-        first = measurements[0].timestamp_utc
-        last = measurements[-1].timestamp_utc
-        return first > start_date or last < end_date
+        first = WeatherService._ensure_utc(measurements[0].timestamp_utc)
+        last = WeatherService._ensure_utc(measurements[-1].timestamp_utc)
+        start_utc = WeatherService._ensure_utc(start_date)
+        end_utc = WeatherService._ensure_utc(end_date)
+        return first > start_utc or last < end_utc

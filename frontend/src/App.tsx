@@ -11,7 +11,7 @@ type WeatherMeasurement = {
   wind_speed_ms: number | null
 }
 
-const API_URL = 'http://127.0.0.1:8000/api/weather/'
+const API_URL = 'http://127.0.0.1:8000/api/'
 
 function formatDate(value: string) {
   return new Date(value).toLocaleString('es-ES', {
@@ -37,6 +37,8 @@ function App() {
         const endDate = '2026-05-30T00:00:00'
         const stationName = 'Meteo Station Gabriel de Castilla'
         const timeAggregation = 'Hourly'
+        
+        // Construcción estricta de la URL con Path Parameters
         const url = `${API_URL}antartida/datos/fechaini/${encodeURIComponent(
           startDate,
         )}/fechafin/${encodeURIComponent(endDate)}/estacion/${encodeURIComponent(
@@ -83,15 +85,15 @@ function App() {
               <dl>
                 <div>
                   <dt>Temperatura</dt>
-                  <dd>{item.temperature_c ?? 'N/A'} °C</dd>
+                  <dd>{item.temperature_c !== null ? item.temperature_c.toFixed(1) : 'N/A'} °C</dd>
                 </div>
                 <div>
                   <dt>Presion</dt>
-                  <dd>{item.pressure_hpa ?? 'N/A'} hPa</dd>
+                  <dd>{item.pressure_hpa !== null ? item.pressure_hpa.toFixed(1) : 'N/A'} hPa</dd>
                 </div>
                 <div>
                   <dt>Viento</dt>
-                  <dd>{item.wind_speed_ms ?? 'N/A'} m/s</dd>
+                  <dd>{item.wind_speed_ms !== null ? item.wind_speed_ms.toFixed(1) : 'N/A'} m/s</dd>
                 </div>
               </dl>
             </article>
