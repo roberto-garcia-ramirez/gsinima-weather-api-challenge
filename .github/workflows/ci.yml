@@ -31,5 +31,7 @@ jobs:
 
     - name: Run Pytest
       working-directory: ./backend
+      env:
+        AEMET_API_KEY: "dummy_key_for_testing_purposes"
       run: |
         python -m pytest -v
