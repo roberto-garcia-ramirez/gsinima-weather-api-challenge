@@ -100,6 +100,15 @@ This workflow ensures that new changes do not break existing functionality and r
 
 ---
 
+## 📌 Pending Improvements (TODOs)
+
+Due to the time constraints of the challenge, the core architecture, resiliency (mocking system), and full-stack integration were prioritized. Keeping the specific requirements in mind, the following features are mapped for the next iteration:
+
+* **Dynamic Field Selection:** Implement query parameters to allow the client to dynamically select specific data fields (e.g., requesting only `temperature` and `pressure` instead of the full dataset), optimizing payload size and API efficiency.
+* **Strict CET/CEST Offset Formatting:** Refactor the `timestamp_utc` output field in the serialization layer (Pydantic schemas) to automatically cast and format the ISO string to include the strict `Europe/Madrid` timezone offset (e.g., `+02:00` or `+01:00` adjusting for Daylight Saving Time).
+
+---
+
 ## 🛠️ Tech Stack
 
 ### Backend
