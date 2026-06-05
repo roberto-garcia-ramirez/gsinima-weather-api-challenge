@@ -31,10 +31,8 @@ jobs:
 
     - name: Initialize Database
       working-directory: ./backend
-      env:
-        AEMET_API_KEY: "dummy_key_for_testing_purposes"
       run: |
-        python -c "from app.db.session import engine; from app.db.base import Base; import asyncio; asyncio.run(Base.metadata.create_all(engine))"
+        python -c "import sqlite3; conn = sqlite3.connect('weather.db'); conn.execute('CREATE TABLE IF NOT EXISTS weather_measurements (id INTEGER PRIMARY KEY AUTOINCREMENT, station_name VARCHAR NOT NULL, timestamp_utc DATETIME NOT NULL, temperature_c FLOAT, pressure_hpa FLOAT, wind_speed_ms FLOAT)'); conn.commit(); conn.close()"
 
     - name: Run Pytest
       working-directory: ./backend
